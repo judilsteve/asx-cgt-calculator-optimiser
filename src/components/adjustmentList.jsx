@@ -241,7 +241,7 @@ function EditAdjustmentRow(props) {
                 renderValue={selected => selected.join(', ')}>
                 {availableParcels.map(p =>
                     <MenuItem key={p.id} value={p.id}>
-                        <Checkbox checked={applicableParcelIds.includes(p.id)} />
+                        <Checkbox color="primary" checked={applicableParcelIds.includes(p.id)} />
                         <ListItemText primary={`${p.id}${p.memo ? ': ' + p.memo : ''}`} secondary={`${p.remainingUnits}x ${p.asxCode}, acquired ${dayjs(p.date).format('YYYY-MM-DD')}`}/>
                     </MenuItem>)}
             </Select>

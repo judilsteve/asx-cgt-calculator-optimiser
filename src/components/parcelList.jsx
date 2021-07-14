@@ -79,7 +79,7 @@ export default function ParcelList() {
     const [detailParcelIds, setDetailParcelIds] = useState([]);
     const toggleDetails = parcelId => detailParcelIds.includes(parcelId) ?
         setDetailParcelIds(detailParcelIds.filter(id => id !== parcelId)) :
-        setDetailParcelIds([detailParcelIds, ...parcelId]);
+        setDetailParcelIds([...detailParcelIds, parcelId]);
 
     return <TableContainer component={Paper}>
         <Table style={{ minWidth: 650 }} size="small">
@@ -138,9 +138,10 @@ function ParcelDetailRow(props) {
             <TableCell align="right"><Typography variant="body2" color="primary">
                 {dayjs(e.date).format('YYYY-MM-DD')}
             </Typography></TableCell>
-            <TableCell key={e.eventId} colSpan={7} align="right"><Typography variant="body2" color="primary">
+            <TableCell key={e.eventId} colSpan={6} align="right"><Typography variant="body2" color="primary">
                 {e.log}
             </Typography></TableCell>
+            <TableCell/>
         </TableRow>)}
     </>
 }

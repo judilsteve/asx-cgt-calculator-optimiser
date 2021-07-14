@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, Fragment } from 'react';
 import {
     TableContainer,
     Paper,
@@ -12,7 +12,8 @@ import {
     MenuItem,
     Checkbox,
     ListItemText,
-    Tooltip
+    Tooltip,
+    Typography
 } from '@material-ui/core';
 import {
     Delete,
@@ -20,7 +21,9 @@ import {
     Done,
     Clear,
     Edit,
-    Warning
+    Warning,
+    ExpandLess,
+    ExpandMore
 } from '@material-ui/icons';
 import { KeyboardDatePicker } from "@material-ui/pickers";
 import dayjs from 'dayjs';
@@ -78,6 +81,13 @@ export default function AdjustmentList() {
         return lookup;
     }, [allEventsOrdered, adjustments]);
 
+    const [detailAdjustmentIds, setDetailAdjustmentIds] = useState([]);
+    const toggleDetails = adjustmentId => detailAdjustmentIds.includes(adjustmentId) ?
+        setDetailAdjustmentIds(detailAdjustmentIds.filter(id => id !== adjustmentId)) :
+        setDetailAdjustmentIds([...detailAdjustmentIds, adjustmentId]);
+
+    console.log(detailAdjustmentIds);
+
     return <TableContainer component={Paper}>
         <Table style={{ minWidth: 650 }} size="small">
             <TableHead>
@@ -95,28 +105,70 @@ export default function AdjustmentList() {
                 {/* TODO_JU Expandable detail log that lists the effects of an adjustment */}
                 {orderedAdjustments.map(a => adjustmentIdsBeingEdited.includes(a.id) ?
                     <EditAdjustmentRow key={a.id} id={a.id} adjustment={a} cancel={() => stopEditingAdjustment(a.id)} save={saveAdjustment}/> :
-                    <TableRow key={a.id}>
-                        <TableCell>{ errorLookup[a.id].length ?
-                            errorLookup[a.id].map(e => <Tooltip key={e} title={e}>
-                                <Warning color="error"/>
-                            </Tooltip>) :
-                            <></> }
-                        </TableCell>
-                        <TableCell align="right">{dayjs(a.date).format('YYYY-MM-DD')}</TableCell>
-                        <TableCell align="right">{a.asxCode}</TableCell>
-                        <TableCell align="right">{a.applicableParcelIds.join(', ')}</TableCell>
-                        <TableCell align="right">{a.memo}</TableCell>
-                        <TableCell align="right">{a.netAmount}</TableCell>
-                        <TableCell align="right">
-                            <IconButton size="small" onClick={() => editAdjustment(a.id)}><Edit/></IconButton>
-                            <IconButton size="small" onClick={() => setAdjustments(adjustments.filter(a2 => a2.id !== a.id))}><Delete/></IconButton>
-                        </TableCell>
-                    </TableRow>
+                    <Fragment key={a.id}>
+                        <TableRow>
+                            <TableCell>{ errorLookup[a.id].length ?
+                                errorLookup[a.id].map(e => <Tooltip key={e} title={e}>
+                                    <Warning color="error"/>
+                                </Tooltip>) :
+                                <></> }
+                            </TableCell>
+                            <TableCell align="right">{dayjs(a.date).format('YYYY-MM-DD')}</TableCell>
+                            <TableCell align="right">{a.asxCode}</TableCell>
+                            <TableCell align="right">{a.applicableParcelIds.join(', ')}</TableCell>
+                            <TableCell align="right">{a.memo}</TableCell>
+                            <TableCell align="right">{a.netAmount}</TableCell>
+                            <TableCell align="right">
+                                <IconButton size="small" onClick={() => toggleDetails(a.id)}>{detailAdjustmentIds.includes(a.id) ? <ExpandLess/> : <ExpandMore/>}</IconButton>
+                                <IconButton size="small" onClick={() => editAdjustment(a.id)}><Edit/></IconButton>
+                                <IconButton size="small" onClick={() => setAdjustments(adjustments.filter(a2 => a2.id !== a.id))}><Delete/></IconButton>
+                            </TableCell>
+                        </TableRow>
+                        {detailAdjustmentIds.includes(a.id) && <AdjustmentDetailRow adjustment={a}/>}
+                    </Fragment>
                 )}
                 {lastRow}
             </TableBody>
         </Table>
     </TableContainer>
+}
+
+function AdjustmentDetailRow(props) {
+    const { adjustment } = props;
+
+    const allEventsOrdered = useAllEventsOrdered();
+    const log = useMemo(() => {
+        const available = getAvailableParcelsLookup(allEventsOrdered, adjustment.date, /*errorOnMisingParcel:*/false, adjustment.id );
+        const log = [];
+
+        let totalApplicableUnits = 0;
+        for(const applicableParcelId of adjustment.applicableParcelIds) {
+            const parcel = available[applicableParcelId];
+            if(!parcel || parcel.asxCode !== adjustment.asxCode || parcel.remainingUnits < 0) continue;
+            totalApplicableUnits += parcel.remainingUnits;
+        }
+        log.push(`Adjustment applies to a total of ${totalApplicableUnits} units`);
+        for(const applicableParcelId of adjustment.applicableParcelIds) {
+            const parcel = available[applicableParcelId];
+            if(!parcel || parcel.asxCode !== adjustment.asxCode || parcel.remainingUnits < 0) continue;
+            const percentage = parcel.remainingUnits / totalApplicableUnits * 100;
+            let message = `${percentage.toFixed(2)}% of adjustment applied to parcel ${parcel.id} (${parcel.remainingUnits} remaining units). `;
+            const newCostBase = parcel.perUnitCostBase + adjustment.netAmount / totalApplicableUnits;
+            message += `Cost base of parcel was ${adjustment.netAmount > 0 ? 'raised' : 'lowered'} from $${parcel.perUnitCostBase.toFixed(4)}/u to $${newCostBase.toFixed(4)}/u.`;
+            log.push(message);
+        }
+        return log;
+    }, [allEventsOrdered, adjustment]);
+
+    return <>
+        {log.map(e => <TableRow>
+            <TableCell/>
+            <TableCell key={e} colSpan={5} align="right"><Typography variant="body2" color="primary">
+                {e}
+            </Typography></TableCell>
+            <TableCell/>
+        </TableRow>)}
+    </>
 }
 
 function EditAdjustmentRow(props) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, Fragment } from 'react';
 import {
     TableContainer,
     Paper,
@@ -10,20 +10,25 @@ import {
     IconButton,
     TextField,
     FormControlLabel,
-    Switch
+    Switch,
+    Typography
 } from '@material-ui/core';
 import {
     Delete,
     Add,
     Done,
     Clear,
-    Edit
+    Edit,
+    ExpandLess,
+    ExpandMore
 } from '@material-ui/icons';
 import { KeyboardDatePicker } from "@material-ui/pickers";
 import dayjs from 'dayjs';
 import { useSharedState } from '../hooks/useSharedState';
 import { parcels as sharedStateParcels } from '../sharedState';
 import { maxBy, orderBy } from 'lodash-es';
+import  { getParcelLog } from '../hooks/useAvailableParcels';
+import useAllEventsOrdered from '../hooks/useAllEventsOrdered';
 
 export default function ParcelList() {
     const [parcels, setParcels] = useSharedState(sharedStateParcels);
@@ -71,6 +76,11 @@ export default function ParcelList() {
         stopEditingParcel(p.id);
     };
 
+    const [detailParcelIds, setDetailParcelIds] = useState([]);
+    const toggleDetails = parcelId => detailParcelIds.includes(parcelId) ?
+        setDetailParcelIds(detailParcelIds.filter(id => id !== parcelId)) :
+        setDetailParcelIds([detailParcelIds, ...parcelId]);
+
     return <TableContainer component={Paper}>
         <Table style={{ minWidth: 650 }} size="small">
             <TableHead>
@@ -87,28 +97,52 @@ export default function ParcelList() {
                 </TableRow>
             </TableHead>
             <TableBody>
-                {/* TODO_JU Expandable detail log that lists the history of a parcel (adjustments and sales) */}
                 {orderedParcels.map(p => parcelIdsBeingEdited.includes(p.id) ?
                     <EditParcelRow key={p.id} id={p.id} parcel={p} cancel={() => stopEditingParcel(p.id)} save={saveParcel}/> :
-                    <TableRow key={p.id}>
-                        <TableCell component="th" scope="row">{p.id}</TableCell>
-                        <TableCell align="right">{dayjs(p.date).format('YYYY-MM-DD')}</TableCell>
-                        <TableCell align="right">{p.asxCode}</TableCell>
-                        <TableCell align="right">{p.isDrp ? 'Dividend Reinvestment' : 'Purchase'}</TableCell>
-                        <TableCell align="right">{p.memo}</TableCell>
-                        <TableCell align="right">{p.units}</TableCell>
-                        <TableCell align="right">{p.unitPrice}</TableCell>
-                        <TableCell align="right">{p.brokerage}</TableCell>
-                        <TableCell align="right">
-                            <IconButton size="small" onClick={() => editParcel(p.id)}><Edit/></IconButton>
-                            <IconButton size="small" onClick={() => setParcels(parcels.filter(p2 => p2.id !== p.id))}><Delete/></IconButton>
-                        </TableCell>
-                    </TableRow>
+                    <Fragment key={p.id}>
+                        <TableRow key={p.id}>
+                            <TableCell component="th" scope="row">{p.id}</TableCell>
+                            <TableCell align="right">{dayjs(p.date).format('YYYY-MM-DD')}</TableCell>
+                            <TableCell align="right">{p.asxCode}</TableCell>
+                            <TableCell align="right">{p.isDrp ? 'Dividend Reinvestment' : 'Purchase'}</TableCell>
+                            <TableCell align="right">{p.memo}</TableCell>
+                            <TableCell align="right">{p.units}</TableCell>
+                            <TableCell align="right">{p.unitPrice}</TableCell>
+                            <TableCell align="right">{p.brokerage}</TableCell>
+                            <TableCell align="right">
+                                <IconButton size="small" onClick={() => toggleDetails(p.id)}>{detailParcelIds.includes(p.id) ? <ExpandLess/> : <ExpandMore/>}</IconButton>
+                                <IconButton size="small" onClick={() => editParcel(p.id)}><Edit/></IconButton>
+                                <IconButton size="small" onClick={() => setParcels(parcels.filter(p2 => p2.id !== p.id))}><Delete/></IconButton>
+                            </TableCell>
+                        </TableRow>
+                        {detailParcelIds.includes(p.id) && <ParcelDetailRow parcelId={p.id}/>}
+                    </Fragment>
                 )}
                 {lastRow}
             </TableBody>
         </Table>
     </TableContainer>
+}
+
+function ParcelDetailRow(props) {
+    const { parcelId } = props;
+
+    const allEventsOrdered = useAllEventsOrdered();
+    const log = useMemo(() =>
+        getParcelLog(allEventsOrdered).filter(l => l.parcelId === parcelId)
+    , [allEventsOrdered, parcelId]);
+
+    return <>
+        {log.map(e => <TableRow>
+            <TableCell/>
+            <TableCell align="right"><Typography variant="body2" color="primary">
+                {dayjs(e.date).format('YYYY-MM-DD')}
+            </Typography></TableCell>
+            <TableCell key={e.eventId} colSpan={7} align="right"><Typography variant="body2" color="primary">
+                {e.log}
+            </Typography></TableCell>
+        </TableRow>)}
+    </>
 }
 
 function EditParcelRow(props) {

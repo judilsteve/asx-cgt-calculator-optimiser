@@ -32,7 +32,7 @@ function App() {
             right now (press Ctrl+S on your keyboard) so that you still have access too the calculator even if this website
             disappears from the internet.
             <br/><br/>
-            This calculator is also free software licensed under the <a href={`${repoUrl}/blob/main/LICENSE.md`}>Affero GPL</a>. You may view the source code <a href={repoUrl}>here</a>.
+            This calculator is also free software licensed under the <a href={`${repoUrl}/blob/master/LICENSE.md`}>Affero GPL</a>. You may view the source code <a href={repoUrl}>here</a>.
             If you wish to use the source code as a basis for your own work, you may do so, but you must
             adhere to the terms of the original license if you distribute your work.
             <br/><br/>

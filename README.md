@@ -8,4 +8,4 @@ Use it now [here](https://judilsteve.github.io/asx_cgt).
 
 ## License
 
-AGPL. See [COPYING.md](https://github.com/judilsteve/asx-cgt-calculator-optimiser/blob/main/LICENSE.md) for more details.
+AGPL. See [COPYING.md](https://github.com/judilsteve/asx-cgt-calculator-optimiser/blob/master/LICENSE.md) for more details.

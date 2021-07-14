@@ -29,7 +29,7 @@ function App() {
             <DonateButton/>
             <br/>
             This calculator is a Single Page Application, or SPA. This means you can save the entire application to your computer
-            right now (press Ctrl+S on your keyboard) so that you still have access too the calculator even if this website
+            right now (press Ctrl+S on your keyboard) so that you still have access to the calculator even if this website
             disappears from the internet.
             <br/><br/>
             This calculator is also free software licensed under the <a href={`${repoUrl}/blob/master/COPYING.md`}>Affero GPL</a>. You may view the source code <a href={repoUrl}>here</a>.

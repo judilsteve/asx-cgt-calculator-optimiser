@@ -86,8 +86,6 @@ export default function AdjustmentList() {
         setDetailAdjustmentIds(detailAdjustmentIds.filter(id => id !== adjustmentId)) :
         setDetailAdjustmentIds([...detailAdjustmentIds, adjustmentId]);
 
-    console.log(detailAdjustmentIds);
-
     return <TableContainer component={Paper}>
         <Table style={{ minWidth: 650 }} size="small">
             <TableHead>
@@ -102,7 +100,6 @@ export default function AdjustmentList() {
                 </TableRow>
             </TableHead>
             <TableBody>
-                {/* TODO_JU Expandable detail log that lists the effects of an adjustment */}
                 {orderedAdjustments.map(a => adjustmentIdsBeingEdited.includes(a.id) ?
                     <EditAdjustmentRow key={a.id} id={a.id} adjustment={a} cancel={() => stopEditingAdjustment(a.id)} save={saveAdjustment}/> :
                     <Fragment key={a.id}>
@@ -147,7 +144,7 @@ function AdjustmentDetailRow(props) {
             if(!parcel || parcel.asxCode !== adjustment.asxCode || parcel.remainingUnits < 0) continue;
             totalApplicableUnits += parcel.remainingUnits;
         }
-        log.push(`Adjustment applies to a total of ${totalApplicableUnits} units`);
+        log.push(`Adjustment applies to a total of ${totalApplicableUnits} units.`);
         for(const applicableParcelId of adjustment.applicableParcelIds) {
             const parcel = available[applicableParcelId];
             if(!parcel || parcel.asxCode !== adjustment.asxCode || parcel.remainingUnits < 0) continue;
@@ -161,9 +158,9 @@ function AdjustmentDetailRow(props) {
     }, [allEventsOrdered, adjustment]);
 
     return <>
-        {log.map(e => <TableRow>
+        {log.map(e => <TableRow key={e}>
             <TableCell/>
-            <TableCell key={e} colSpan={5} align="right"><Typography variant="body2" color="primary">
+            <TableCell colSpan={5} align="right"><Typography variant="body2" color="primary">
                 {e}
             </Typography></TableCell>
             <TableCell/>

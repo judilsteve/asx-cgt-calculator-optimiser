@@ -133,12 +133,12 @@ function ParcelDetailRow(props) {
     , [allEventsOrdered, parcelId]);
 
     return <>
-        {log.map(e => <TableRow>
+        {log.map(e => <TableRow key={e.eventId}>
             <TableCell/>
             <TableCell align="right"><Typography variant="body2" color="primary">
                 {dayjs(e.date).format('YYYY-MM-DD')}
             </Typography></TableCell>
-            <TableCell key={e.eventId} colSpan={6} align="right"><Typography variant="body2" color="primary">
+            <TableCell colSpan={6} align="right"><Typography variant="body2" color="primary">
                 {e.log}
             </Typography></TableCell>
             <TableCell/>

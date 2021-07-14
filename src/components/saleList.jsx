@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, Fragment } from 'react';
 import {
     TableContainer,
     Paper,
@@ -21,14 +21,16 @@ import {
     Done,
     Clear,
     Edit,
-    Warning
+    Warning,
+    ExpandLess,
+    ExpandMore
 } from '@material-ui/icons';
 import { KeyboardDatePicker } from "@material-ui/pickers";
 import dayjs from 'dayjs';
 import Select from './select';
 import { useSharedState } from '../hooks/useSharedState';
 import useAllEventsOrdered from '../hooks/useAllEventsOrdered';
-import useAvailableParcels, { processEvent } from '../hooks/useAvailableParcels';
+import useAvailableParcels, { processEvent, getAvailableParcelsLookup } from '../hooks/useAvailableParcels';
 import { sales as sharedStateSales } from '../sharedState';
 import { orderBy } from 'lodash-es';
 import { v4 as uuidv4 } from 'uuid';
@@ -112,6 +114,11 @@ export default function SaleList() {
         stopEditingSale(s.id);
     };
 
+    const [detailSaleIds, setDetailSaleIds] = useState([]);
+    const toggleDetails = saleId => detailSaleIds.includes(saleId) ?
+        setDetailSaleIds(detailSaleIds.filter(id => id !== saleId)) :
+        setDetailSaleIds([...detailSaleIds, saleId]);
+
     return <TableContainer component={Paper}>
         <Table style={{ minWidth: 650 }} size="small">
             <TableHead>
@@ -128,32 +135,80 @@ export default function SaleList() {
                 </TableRow>
             </TableHead>
             <TableBody>
-                {/* TODO_JU Expandable detail log that lists the parcels/portions sold, their cost bases, and 50% CGT discounts (where applicable) */}
                 {orderedSales.map(s => saleIdsBeingEdited.includes(s.id) ?
                     <EditSaleRow key={s.id} id={s.id} sale={s} cancel={() => stopEditingSale(s.id)} save={saveSale} allEventsOrdered={allEventsOrdered}/> :
-                    <TableRow key={s.id}>
-                        <TableCell>{ saleDataLookup[s.id].errors.length ?
-                            saleDataLookup[s.id].errors.map(e => <Tooltip key={e} title={e}>
-                                <Warning color="error"/>
-                            </Tooltip>) :
-                            <></> }</TableCell>
-                        <TableCell align="right">{dayjs(s.date).format('YYYY-MM-DD')}</TableCell>
-                        <TableCell align="right">{s.asxCode}</TableCell>
-                        <TableCell align="right">{saleDataLookup[s.id].applicableParcels.map(p => `${p.id} (${p.unitsSold}/${p.unitsAvailable})`).join(', ')}</TableCell>
-                        <TableCell align="right">{s.memo}</TableCell>
-                        <TableCell align="right">{s.unitPrice}</TableCell>
-                        <TableCell align="right">{s.brokerage}</TableCell>
-                        <TableCell align="right"><Typography variant="body2" color="primary">{saleDataLookup[s.id].cgtLiability?.toFixed(4) ?? '??'}</Typography></TableCell>
-                        <TableCell align="right">
-                            <IconButton size="small" onClick={() => editSale(s.id)}><Edit/></IconButton>
-                            <IconButton size="small" onClick={() => setSales(sales.filter(s2 => s2.id !== s.id))}><Delete/></IconButton>
-                        </TableCell>
-                    </TableRow>
+                    <Fragment key={s.id}>
+                        <TableRow key={s.id}>
+                            <TableCell>{ saleDataLookup[s.id].errors.length ?
+                                saleDataLookup[s.id].errors.map(e => <Tooltip key={e} title={e}>
+                                    <Warning color="error"/>
+                                </Tooltip>) :
+                                <></> }</TableCell>
+                            <TableCell align="right">{dayjs(s.date).format('YYYY-MM-DD')}</TableCell>
+                            <TableCell align="right">{s.asxCode}</TableCell>
+                            <TableCell align="right">{saleDataLookup[s.id].applicableParcels.map(p => `${p.id} (${p.unitsSold}/${p.unitsAvailable})`).join(', ')}</TableCell>
+                            <TableCell align="right">{s.memo}</TableCell>
+                            <TableCell align="right">{s.unitPrice}</TableCell>
+                            <TableCell align="right">{s.brokerage}</TableCell>
+                            <TableCell align="right"><Typography variant="body2" color="primary">{saleDataLookup[s.id].cgtLiability?.toFixed(4) ?? '??'}</Typography></TableCell>
+                            <TableCell align="right">
+                                <IconButton size="small" onClick={() => toggleDetails(s.id)}>{detailSaleIds.includes(s.id) ? <ExpandLess/> : <ExpandMore/>}</IconButton>
+                                <IconButton size="small" onClick={() => editSale(s.id)}><Edit/></IconButton>
+                                <IconButton size="small" onClick={() => setSales(sales.filter(s2 => s2.id !== s.id))}><Delete/></IconButton>
+                            </TableCell>
+                        </TableRow>
+                        {detailSaleIds.includes(s.id) && <SaleDetailRow sale={s}/>}
+                    </Fragment>
                 )}
                 {lastRow}
             </TableBody>
         </Table>
     </TableContainer>
+}
+
+function SaleDetailRow(props) {
+    const { sale } = props;
+
+    const allEventsOrdered = useAllEventsOrdered();
+    const log = useMemo(() => {
+        const available = getAvailableParcelsLookup(allEventsOrdered, sale.date, /*errorOnMisingParcel:*/false, sale.id );
+        const log = [];
+
+        let totalUnitsSold = 0;
+        for(const applicableParcel of sale.applicableParcels) {
+            const parcel = available[applicableParcel.id];
+            if(!parcel || parcel.asxCode !== sale.asxCode || applicableParcel.unitsSold > parcel.remainingUnits) continue;
+            totalUnitsSold += applicableParcel.unitsSold;
+        }
+        log.push(`Sale applies to a total of ${totalUnitsSold} units.`);
+        for(const applicableParcel of sale.applicableParcels) {
+            const parcel = available[applicableParcel.id];
+            if(!parcel || parcel.asxCode !== sale.asxCode || applicableParcel.unitsSold > parcel.remainingUnits) continue;
+            let message = `${applicableParcel.unitsSold}x ${parcel.id} ($${parcel.perUnitCostBase.toFixed(4)}/u CB): `;
+            const percentage = applicableParcel.unitsSold / totalUnitsSold * 100;
+            const finalCostBase = parcel.perUnitCostBase + sale.brokerage / totalUnitsSold;
+            message += `${percentage.toFixed(2)}% of brokerage added to CB at sale date. Final CB $${finalCostBase.toFixed(4)}/u. `;
+            let capitalGains = (sale.unitPrice - finalCostBase) * applicableParcel.unitsSold;
+            message += `Total capital gains: $${capitalGains.toFixed(2)}`;
+            if(dayjs(sale.date).diff(dayjs(parcel.date), 'year', true) > 1) {
+                capitalGains /= 2;
+                message += `, discounted by 50% since parcel was >1yr old`;
+            }
+            message +=`. Final CGT Liability: $${capitalGains.toFixed(2)}.`;
+            log.push(message);
+        }
+        return log;
+    }, [allEventsOrdered, sale]);
+
+    return <>
+        {log.map(e => <TableRow key={e}>
+            <TableCell/>
+            <TableCell colSpan={7} align="right"><Typography variant="body2" color="primary">
+                {e}
+            </Typography></TableCell>
+            <TableCell/>
+        </TableRow>)}
+    </>
 }
 
 function EditSaleRow(props) {

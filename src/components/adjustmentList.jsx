@@ -44,7 +44,7 @@ export default function AdjustmentList() {
     const lastRow = newAdjustmentActive ?
         <EditAdjustmentRow cancel={() => setNewAdjustmentActive(false)} save={saveNewAdjustment}/> : 
         <TableRow>
-            <TableCell align="right" colSpan={6}><IconButton onClick={() => setNewAdjustmentActive(true)}><Add/></IconButton></TableCell>
+            <TableCell align="right" colSpan={7}><IconButton onClick={() => setNewAdjustmentActive(true)}><Add/></IconButton></TableCell>
         </TableRow>
 
     const [adjustmentIdsBeingEdited, setAdjustmentIdsBeingEdited] = useState([]);
@@ -57,19 +57,25 @@ export default function AdjustmentList() {
 
     const allEventsOrdered = useAllEventsOrdered();
 
-    const errorRowIds = useMemo(() => {
-        const rowIds = new Set();
+    const errorLookup = useMemo(() => {
+        const lookup = {};
         for(const adjustment of adjustments) {
+            const errors = [];
             const availableParcels = getAvailableParcelsLookup(allEventsOrdered, adjustment.date, /*errorOnMissingParcel:*/false);
             for(const parcelId of adjustment.applicableParcelIds) {
                 const parcel = availableParcels[parcelId];
-                if(parcel === undefined || parcel.remainingUnits <= 0) {
-                    rowIds.add(adjustment.id);
-                    break;
+                if(parcel === undefined) {
+                    errors.push(`Parcel ${parcelId} did not exist at the adjustment date.`);
+                    continue;
+                } else if(parcel.asxCode !== adjustment.asxCode) {
+                    errors.push(`Parcel ${parcelId} has the wrong ASX Code.`);
+                } else if(parcel.remainingUnits <= 0) {
+                    errors.push(`Parcel ${parcelId} was entirely sold before the adjustment date.`);
                 }
             }
+            lookup[adjustment.id] = errors;
         }
-        return rowIds;
+        return lookup;
     }, [allEventsOrdered, adjustments]);
 
     return <TableContainer component={Paper}>
@@ -78,6 +84,7 @@ export default function AdjustmentList() {
                 <TableRow>
                     <TableCell/>
                     <TableCell align="right">Date</TableCell>
+                    <TableCell align="right">ASX Code</TableCell>
                     <TableCell align="right">Applicable Parcels</TableCell>
                     <TableCell align="right">Memo</TableCell>
                     <TableCell align="right">Net Amount ($)</TableCell>
@@ -89,13 +96,14 @@ export default function AdjustmentList() {
                 {orderedAdjustments.map(a => adjustmentIdsBeingEdited.includes(a.id) ?
                     <EditAdjustmentRow key={a.id} id={a.id} adjustment={a} cancel={() => stopEditingAdjustment(a.id)} save={saveAdjustment}/> :
                     <TableRow key={a.id}>
-                        <TableCell>{ errorRowIds.has(a.id) ? 
-                            <Tooltip title="One or more applicable parcels do not exist or have been entirely sold before the adjustment date.">
+                        <TableCell>{ errorLookup[a.id].length ?
+                            errorLookup[a.id].map(e => <Tooltip key={e} title={e}>
                                 <Warning color="error"/>
-                            </Tooltip> :
+                            </Tooltip>) :
                             <></> }
                         </TableCell>
                         <TableCell align="right">{dayjs(a.date).format('YYYY-MM-DD')}</TableCell>
+                        <TableCell align="right">{a.asxCode}</TableCell>
                         <TableCell align="right">{a.applicableParcelIds.join(', ')}</TableCell>
                         <TableCell align="right">{a.memo}</TableCell>
                         <TableCell align="right">{a.netAmount}</TableCell>
@@ -120,12 +128,14 @@ function EditAdjustmentRow(props) {
     } = props;
 
     const [date, setDate] = useState(null);
+    const [asxCode, setAsxCode] = useState(null);
     const [applicableParcelIds, setApplicableParcelIds] = useState([]);
     const [memo, setMemo] = useState('');
     const [netAmount, setNetAmount] = useState('');
 
     useEffect(() => {
         setDate(adjustment?.date ?? null);
+        setAsxCode(adjustment?.asxCode ?? null);
         setApplicableParcelIds(adjustment?.applicableParcelIds ?? []);
         setMemo(adjustment?.memo ?? '');
         setNetAmount(adjustment?.netAmount.toString() ?? '');
@@ -134,6 +144,7 @@ function EditAdjustmentRow(props) {
     const boundSave = () => save({
         id: id ?? uuidv4(),
         date,
+        asxCode,
         applicableParcelIds,
         memo,
         netAmount: parseFloat(netAmount)
@@ -142,12 +153,16 @@ function EditAdjustmentRow(props) {
     const netAmountValid = netAmount && !isNaN(parseFloat(netAmount));
     const valid = date && applicableParcelIds.length && netAmountValid;
 
-    const availableParcels = useAvailableParcels(useAllEventsOrdered(), date, /*errorOnMissingParcel:*/false);
+    const allAvailableParcels = useAvailableParcels(useAllEventsOrdered(), date, /*errorOnMissingParcel:*/false)
+    const availableParcels = useMemo(() => allAvailableParcels
+        .filter(p => !asxCode || p.asxCode === asxCode)
+    , [allAvailableParcels, asxCode]);
 
     useEffect(() => {
-        setApplicableParcelIds(applicableParcelIds =>
-            applicableParcelIds.filter(id => availableParcels.find(p => p.id === id)));
-    }, [availableParcels]);
+        setApplicableParcelIds(applicableParcelIds => applicableParcelIds
+            .filter(id => availableParcels.find(p =>
+                p.id === id && (!asxCode || p.asxCode === asxCode))));
+    }, [availableParcels, asxCode]);
 
     return <TableRow>
         <TableCell/>
@@ -161,6 +176,9 @@ function EditAdjustmentRow(props) {
                 error={!date}
                 onChange={e => setDate(e.toJSON())}
             />
+        </TableCell>
+        <TableCell align="right">
+            <TextField value={asxCode} onChange={e => setAsxCode(e.target.value)} label="ASX Code"/>
         </TableCell>
         <TableCell align="right">
             <Select

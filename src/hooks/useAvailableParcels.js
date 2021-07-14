@@ -16,9 +16,9 @@ export function processEvent(event, currentHoldings, errorOnMissingParcel) {
             let totalApplicableUnits = 0;
             for(const applicableParcelId of event.applicableParcelIds) {
                 const parcel = currentHoldings[applicableParcelId];
-                if(!parcel) {
+                if(!parcel || parcel.asxCode !== event.asxCode || parcel.remainingUnits <= 0) {
                     if(errorOnMissingParcel)
-                        throw new Error(`Adjustment ${event.id} was applicable to non-existent parcel ${applicableParcelId}`);
+                        throw new Error(`Adjustment ${event.id} was applicable to invalid parcel ${applicableParcelId}`);
                     else continue;
                 }
                 totalApplicableUnits += parcel.remainingUnits;

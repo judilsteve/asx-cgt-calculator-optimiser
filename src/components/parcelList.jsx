@@ -206,7 +206,7 @@ function EditParcelRow(props) {
             <TextField value={asxCode} onChange={e => setAsxCode(e.target.value)} error={!asxCode} label="ASX Code"/>
         </TableCell>
         <TableCell align="right">
-            <FormControlLabel control={<Switch value={isDrp} onChange={() => setIsDrp(!isDrp)}/>} label="Dividend Reinvestment" />
+            <FormControlLabel control={<Switch color="primary" checked={isDrp} onChange={() => setIsDrp(!isDrp)}/>} label="Dividend Reinvestment" />
         </TableCell>
         <TableCell align="right">
             <TextField value={memo} onChange={e => setMemo(e.target.value)} label="Memo"/>

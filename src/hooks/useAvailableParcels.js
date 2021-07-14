@@ -90,6 +90,6 @@ export function getParcelLog(allEventsOrdered) {
 export default function useAvailableParcels(allEventsOrdered, date, errorOnMissingParcel, eventIdToExclude) {
     return useMemo(() => {
         const available = getAvailableParcelsLookup(allEventsOrdered, date, errorOnMissingParcel, eventIdToExclude);
-        return Object.values(available);
+        return Object.values(available).filter(p => p.remainingUnits > 0);
     }, [allEventsOrdered, date, errorOnMissingParcel, eventIdToExclude]);
 }

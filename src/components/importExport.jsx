@@ -48,7 +48,7 @@ export default function ImportExport() {
         const link = document.createElement("a");
         link.href = blobUrl;
         const now = dayjs();
-        link.download = `Holdings_${now.format(`YYYY-MM-DD_Thh-mm-ss`)}.json`;
+        link.download = `Holdings_${now.format(`YYYY-MM-DD_THH-mm-ss`)}.json`;
         document.body.appendChild(link);
         link.dispatchEvent( new MouseEvent('click', {
             bubbles: true,

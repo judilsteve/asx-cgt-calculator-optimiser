@@ -215,6 +215,26 @@ function EditAdjustmentRow(props) {
                 p.id === id && (!asxCode || p.asxCode === asxCode))));
     }, [availableParcels, asxCode]);
 
+    const totalApplicableUnits = useMemo(() => {
+        let total = 0;
+        for(const parcel of availableParcels) {
+            if(applicableParcelIds.includes(parcel.id)) total += parcel.remainingUnits;
+        }
+        return total;
+    }, [availableParcels, applicableParcelIds]);
+
+    const toggleSelectAll = () => {
+        if(applicableParcelIds.length !== availableParcels.length)
+            setApplicableParcelIds(availableParcels.map(p => p.id));
+        else setApplicableParcelIds([]);
+    };
+
+    const toggleParcel = parcelId => {
+        if(applicableParcelIds.includes(parcelId))
+            setApplicableParcelIds(applicableParcelIds.filter(pid => parcelId !== pid));
+        else setApplicableParcelIds([...applicableParcelIds, parcelId]);
+    }
+
     return <TableRow>
         <TableCell/>
         <TableCell align="right">
@@ -239,10 +259,15 @@ function EditAdjustmentRow(props) {
                 error={!applicableParcelIds.length}
                 multiple
                 value={applicableParcelIds}
-                onChange={e => setApplicableParcelIds(e.target.value)}
                 renderValue={selected => selected.join(', ')}>
-                {availableParcels.map(p =>
-                    <MenuItem key={p.id} value={p.id}>
+                    <MenuItem onClick={toggleSelectAll}>
+                        <Checkbox color="primary"
+                            checked={applicableParcelIds.length === availableParcels.length}
+                            indeterminate={applicableParcelIds.length && applicableParcelIds.length < availableParcels.length} />
+                        <ListItemText primary="Select All" secondary={`${totalApplicableUnits} currently selected`}/>
+                    </MenuItem>
+                    {availableParcels.map(p =>
+                    <MenuItem key={p.id} onClick={() => toggleParcel(p.id)}>
                         <Checkbox color="primary" checked={applicableParcelIds.includes(p.id)} />
                         <ListItemText primary={`${p.id}${p.memo ? ': ' + p.memo : ''}`} secondary={`${p.remainingUnits}x ${p.asxCode}, acquired ${dayjs(p.date).format('YYYY-MM-DD')}`}/>
                     </MenuItem>)}

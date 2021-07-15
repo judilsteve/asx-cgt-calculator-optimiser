@@ -47,7 +47,6 @@ function calculateCgtLiability(sale) {
     for(const parcel of sale.applicableParcels) {
         totalUnitsSold += parcel.unitsSold;
     }
-    // TODO_JU What to do if totalUnitsSold is 0?
     for(const parcel of sale.applicableParcels) {
         let parcelLiability = (sale.unitPrice * parcel.unitsSold);
         parcelLiability -= parcel.unitsSold * parcel.perUnitCostBase;

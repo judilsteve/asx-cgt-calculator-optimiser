@@ -23,12 +23,57 @@ export class SharedState {
     }
 }
 
+export const saveFailedState = new SharedState(false);
+
+const unloadWarning = e => {
+    const msg = 'WARNING: Changes could not be saved to your browser\'s local storage. ' +
+        'Click "cancel" and export your holdings using the buttons at the top of the page or you WILL lose your work.';
+    (e || window.event).returnValue = msg; // Gecko + IE
+    return msg; // Gecko + Webkit, Safari, Chrome etc.
+}
+let unloadWarningSet = false;
+
+saveFailedState.watch(failed => {
+    if(failed && !unloadWarningSet) {
+        window.addEventListener('beforeunload', unloadWarning);
+        unloadWarningSet = true;
+    } else if(!failed && unloadWarningSet) {
+        clearUnloadWarning();
+    }
+})
+
+export function clearUnloadWarning() {
+    window.removeEventListener('beforeunload', unloadWarning);
+    unloadWarningSet = false;
+}
+
+export function notifySaveFailed() {
+    saveFailedState.setValue(true);
+}
+
+export function notifySaveSucceeded() {
+    saveFailedState.setValue(false);
+}
+
+let i = 0;
+
 export class SharedPersistedState extends SharedState {
     constructor(localStorageKey, initialValue) {
         const persistedJson = window.localStorage.getItem(localStorageKey);
         const persistedData = persistedJson === null ? initialValue : JSON.parse(persistedJson);
         super(persistedData);
-        this.watch(s => window.localStorage.setItem(localStorageKey, JSON.stringify(s)));
+        // https://developer.mozilla.org/en-US/docs/Web/API/Storage/setItem#exceptions
+        this.watch(s => {
+            try {
+                if(i++ % 3) throw new Error('Test error');
+                window.localStorage.setItem(localStorageKey, JSON.stringify(s));
+                notifySaveSucceeded();
+            } catch(e) {
+                console.error('Saving to local storage failed:');
+                console.error(e);
+                notifySaveFailed();
+            }
+        });
     }
 }
 

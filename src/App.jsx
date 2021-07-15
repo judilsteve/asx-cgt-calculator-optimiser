@@ -5,6 +5,7 @@ import AdjustmentList from './components/adjustmentList';
 import ImportExport from './components/importExport'
 import SaleList from './components/saleList';
 import DonateButton from './components/donateButton';
+import SaveFailedSnackbar from './components/saveFailedSnackbar';
 
 function App() {
     const repoUrl = 'https://github.com/judilsteve/asx-cgt-calculator-optimiser';
@@ -67,6 +68,7 @@ function App() {
         <br/>
         <SaleList/>
         <div style={{ height: '75vh' }}/>{/* Bit of dead space to let the user scroll content up higher for convenience */}
+        <SaveFailedSnackbar/>
     </Container>);
 }
 

@@ -137,17 +137,19 @@ function AdjustmentDetailRow(props) {
     const log = useMemo(() => {
         const available = getAvailableParcelsLookup(allEventsOrdered, adjustment.date, /*errorOnMisingParcel:*/false, adjustment.id );
         const log = [];
+        const invalidLog = ['Adjustment is invalid. Fix issues to see further information.'];
 
         let totalApplicableUnits = 0;
         for(const applicableParcelId of adjustment.applicableParcelIds) {
             const parcel = available[applicableParcelId];
-            if(!parcel || parcel.asxCode !== adjustment.asxCode || parcel.remainingUnits < 0) continue;
+            if(!parcel || parcel.asxCode !== adjustment.asxCode || parcel.remainingUnits < 0) return invalidLog;
             totalApplicableUnits += parcel.remainingUnits;
         }
+        if(totalApplicableUnits <= 0) return invalidLog;
         log.push(`Adjustment applies to a total of ${totalApplicableUnits} units.`);
         for(const applicableParcelId of adjustment.applicableParcelIds) {
             const parcel = available[applicableParcelId];
-            if(!parcel || parcel.asxCode !== adjustment.asxCode || parcel.remainingUnits < 0) continue;
+            if(!parcel || parcel.asxCode !== adjustment.asxCode || parcel.remainingUnits < 0) return invalidLog;
             const percentage = parcel.remainingUnits / totalApplicableUnits * 100;
             let message = `${percentage.toFixed(2)}% of adjustment applied to parcel ${parcel.id} (${parcel.remainingUnits} remaining units). `;
             const newCostBase = parcel.perUnitCostBase + adjustment.netAmount / totalApplicableUnits;

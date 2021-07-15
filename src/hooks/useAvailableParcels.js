@@ -30,6 +30,7 @@ export function processEvent(event, currentHoldings, errorOnMissingParcel, logs)
                 }
                 totalApplicableUnits += parcel.remainingUnits;
             }
+            // TODO_JU What to do if totalApplicableUnits is 0?
             for(const applicableParcelId of event.applicableParcelIds) {
                 const parcel = currentHoldings[applicableParcelId];
                 if(!parcel) continue;

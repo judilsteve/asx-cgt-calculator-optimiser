@@ -47,6 +47,7 @@ function calculateCgtLiability(sale) {
     for(const parcel of sale.applicableParcels) {
         totalUnitsSold += parcel.unitsSold;
     }
+    // TODO_JU What to do if totalUnitsSold is 0?
     for(const parcel of sale.applicableParcels) {
         let parcelLiability = (sale.unitPrice * parcel.unitsSold);
         parcelLiability -= parcel.unitsSold * parcel.perUnitCostBase;
@@ -173,17 +174,19 @@ function SaleDetailRow(props) {
     const log = useMemo(() => {
         const available = getAvailableParcelsLookup(allEventsOrdered, sale.date, /*errorOnMisingParcel:*/false, sale.id );
         const log = [];
+        const invalidLog = ['Sale is invalid. Fix issues to see further information.'];
 
         let totalUnitsSold = 0;
         for(const applicableParcel of sale.applicableParcels) {
             const parcel = available[applicableParcel.id];
-            if(!parcel || parcel.asxCode !== sale.asxCode || applicableParcel.unitsSold > parcel.remainingUnits) continue;
+            if(!parcel || parcel.asxCode !== sale.asxCode || applicableParcel.unitsSold > parcel.remainingUnits) return invalidLog;
             totalUnitsSold += applicableParcel.unitsSold;
         }
+        if(totalUnitsSold <= 0) return invalidLog;
         log.push(`Sale applies to a total of ${totalUnitsSold} units.`);
         for(const applicableParcel of sale.applicableParcels) {
             const parcel = available[applicableParcel.id];
-            if(!parcel || parcel.asxCode !== sale.asxCode || applicableParcel.unitsSold > parcel.remainingUnits) continue;
+            if(!parcel || parcel.asxCode !== sale.asxCode || applicableParcel.unitsSold > parcel.remainingUnits) return invalidLog;
             let message = `${applicableParcel.unitsSold}x ${parcel.id} ($${parcel.perUnitCostBase.toFixed(4)}/u CB): `;
             const percentage = applicableParcel.unitsSold / totalUnitsSold * 100;
             const finalCostBase = parcel.perUnitCostBase + sale.brokerage / totalUnitsSold;

@@ -1,6 +1,6 @@
 import { Button, Typography } from '@material-ui/core';
 import React, { useRef, useState } from 'react';
-import { useSharedState } from '../hooks/useSharedState';
+import { clearUnloadWarning, useSharedState } from '../hooks/useSharedState';
 import { parcels as parcelsSharedState, adjustments as adjustmentsSharedState, sales as salesSharedState } from '../sharedState';
 import dayjs from 'dayjs';
 
@@ -56,6 +56,7 @@ export default function ImportExport() {
             view: window
         }));
         document.body.removeChild(link);
+        clearUnloadWarning();
     };
 
     const uploadRef = useRef(null);

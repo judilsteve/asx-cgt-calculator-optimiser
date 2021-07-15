@@ -339,11 +339,36 @@ function EditSaleRow(props) {
         rebuildUnitsSoldLookup(newApplicableParcelIds);
     }
 
+    const toggleSelectAll = () => {
+        if(applicableParcelIds.length !== availableParcels.length)
+        updateApplicableParcels(availableParcels.map(p => p.id));
+        else updateApplicableParcels([]);
+    };
+
+    const toggleParcel = parcelId => {
+        if(applicableParcelIds.includes(parcelId))
+            updateApplicableParcels(applicableParcelIds.filter(pid => parcelId !== pid));
+        else updateApplicableParcels([...applicableParcelIds, parcelId]);
+    }
+
     const updateUnitsSold = (parcelId, newUnitsSold) => {
         const newUnitsSoldLookup = { ...unitsSoldLookup };
         newUnitsSoldLookup[parcelId] = newUnitsSold;
         setUnitsSoldLookup(newUnitsSoldLookup);
     }
+
+    const totalUnitsSold = useMemo(() => {
+        let total = 0;
+        for(const value of Object.values(unitsSoldLookup)) {
+            if(!value) return '??';
+            const float = parseFloat(value);
+            if(isNaN(float)) return '??';
+            const int = parseInt(value);
+            if(float !== int) return '??';
+            total += int;
+        }
+        return total;
+    }, [unitsSoldLookup])
 
     return <>
         <TableRow>
@@ -369,12 +394,17 @@ function EditSaleRow(props) {
                     label="Applicable Parcels"
                     error={!applicableParcelIds.length}
                     multiple
-                    fullWidth
                     value={applicableParcelIds}
-                    onChange={e => updateApplicableParcels(e.target.value)}
+                    fullWidth
                     renderValue={selected => selected.map(s => s).join(', ')}>
-                    {orderedAvailableParcels.map(p =>
-                        <MenuItem key={p.id} value={p.id}>
+                        <MenuItem onClick={toggleSelectAll}>
+                            <Checkbox color="primary"
+                                checked={applicableParcelIds.length === availableParcels.length}
+                                indeterminate={applicableParcelIds.length && applicableParcelIds.length < availableParcels.length} />
+                            <ListItemText primary="Select All" secondary={`${totalUnitsSold} currently selected`}/>
+                        </MenuItem>
+                        {orderedAvailableParcels.map(p =>
+                        <MenuItem key={p.id} onClick={() => toggleParcel(p.id)}>
                             <Checkbox color="primary" checked={!!applicableParcelIds.includes(p.id)} />
                             <ListItemText primary={`${p.id}${p.memo ? ': ' + p.memo : ''}`} secondary={`${p.remainingUnits} available, $${perUnitCgtLiabilityLookup[p.id]?.toFixed(4) ?? '??'}/u CGT`}/>
                         </MenuItem>)}
@@ -405,6 +435,18 @@ function EditSaleRow(props) {
                 unitsSold={unitsSoldLookup[pid]}
                 setUnitsSold={u => updateUnitsSold(pid, u)}/>
         )}
+        <TableRow>
+            <TableCell/>
+            <TableCell/>
+            <TableCell/>
+            <TableCell align="right">
+                <Typography variant="body2" color="primary">Total Units: {totalUnitsSold}</Typography>
+            </TableCell>
+            <TableCell/>
+            <TableCell/>
+            <TableCell/>
+            <TableCell/>
+        </TableRow>
     </>;
 }
 

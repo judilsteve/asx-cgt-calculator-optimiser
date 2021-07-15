@@ -1,22 +1,26 @@
 import { useMemo } from 'react';
 
+function makeAvailableParcel(parcel) {
+    return {
+        id: parcel.id,
+        date: parcel.date,
+        memo: parcel.memo,
+        asxCode: parcel.asxCode,
+        remainingUnits: parcel.units,
+        perUnitCostBase: (parcel.units * parcel.unitPrice + parcel.brokerage) / parcel.units
+    };
+}
+
 export function processEvent(event, currentHoldings, errorOnMissingParcel, logs) {
     switch(event.type) {
         case 'ACQUISITION':
-            const perUnitCostBase = (event.units * event.unitPrice + event.brokerage) / event.units;
-            currentHoldings[event.id] = {
-                id: event.id,
-                date: event.date,
-                memo: event.memo,
-                asxCode: event.asxCode,
-                remainingUnits: event.units,
-                perUnitCostBase
-            };
+            const newParcel = makeAvailableParcel(event);
+            currentHoldings[event.id] = newParcel;
             logs?.push({
                 parcelId: event.id,
                 eventId: event.id,
                 date: event.date,
-                log: `Acquired Parcel ${event.id} with initial cost base of $${perUnitCostBase.toFixed(4)}/u.`
+                log: `Acquired Parcel ${event.id} with initial cost base of $${newParcel.perUnitCostBase.toFixed(4)}/u.`
             });
             break;
         case 'ADJUSTMENT':
@@ -90,6 +94,9 @@ export function getParcelLog(allEventsOrdered) {
 
 export default function useAvailableParcels(allEventsOrdered, date, errorOnMissingParcel, eventIdToExclude) {
     return useMemo(() => {
+        if(!date) return allEventsOrdered
+            .filter(e => e.type === 'ACQUISITION')
+            .map(p => makeAvailableParcel(p));
         const available = getAvailableParcelsLookup(allEventsOrdered, date, errorOnMissingParcel, eventIdToExclude);
         return Object.values(available).filter(p => p.remainingUnits > 0);
     }, [allEventsOrdered, date, errorOnMissingParcel, eventIdToExclude]);

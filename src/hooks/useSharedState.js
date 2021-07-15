@@ -55,8 +55,6 @@ export function notifySaveSucceeded() {
     saveFailedState.setValue(false);
 }
 
-let i = 0;
-
 export class SharedPersistedState extends SharedState {
     constructor(localStorageKey, initialValue) {
         const persistedJson = window.localStorage.getItem(localStorageKey);
@@ -65,7 +63,6 @@ export class SharedPersistedState extends SharedState {
         // https://developer.mozilla.org/en-US/docs/Web/API/Storage/setItem#exceptions
         this.watch(s => {
             try {
-                if(i++ % 3) throw new Error('Test error');
                 window.localStorage.setItem(localStorageKey, JSON.stringify(s));
                 notifySaveSucceeded();
             } catch(e) {

@@ -26,32 +26,36 @@ import { KeyboardDatePicker } from "@material-ui/pickers";
 import dayjs from 'dayjs';
 import { useSharedState } from '../hooks/useSharedState';
 import { parcels as sharedStateParcels } from '../sharedState';
-import { maxBy, orderBy } from 'lodash-es';
+import { max, orderBy } from 'lodash-es';
 import  { getParcelLog } from '../hooks/useAvailableParcels';
 import useAllEventsOrdered from '../hooks/useAllEventsOrdered';
+
+const charCodeCapitalA = 'A'.charCodeAt(0);
+
+const getNumericValue = excelColumnIndex => {
+    let numericValue = 0;
+    for(let i = 0; i < excelColumnIndex.length; i++) {
+        numericValue *= 26;
+        numericValue += excelColumnIndex.charCodeAt(i) - charCodeCapitalA + 1;
+    }
+    return numericValue;
+}
+
 
 export default function ParcelList() {
     const [parcels, setParcels] = useSharedState(sharedStateParcels);
     const orderedParcels = useMemo(() => orderBy(parcels, p => p.date), [parcels]);
 
     const nextId = useMemo(() => {
-        const maxId = maxBy(parcels, p => p.id)?.id;
-        if(maxId === undefined) return 'A';
-
-        const charCodeBeforeCapitalA = 'A'.charCodeAt(0) - 1;
-        let numericMaxId = 0;
-        let pow = 0;
-        for(let i = maxId.length - 1; i >= 0; i--) {
-            numericMaxId += (maxId.charCodeAt(i) - charCodeBeforeCapitalA) * Math.pow(26, pow++);
-        }
+        const numericMaxId = max(parcels.map(p => getNumericValue(p.id)));
+        if(numericMaxId === undefined) return 'A';
 
         let numericNextId = numericMaxId + 1;
         let nextId = '';
         while (numericNextId)
         {
-            const modulo = (numericNextId - 1) % 26;
-            nextId = String.fromCharCode(65 + modulo) + nextId;
-            numericNextId = Math.floor((numericNextId - modulo) / 26);
+            nextId = `${String.fromCharCode(charCodeCapitalA + ((numericNextId - 1) % 26))}${nextId}`;
+            numericNextId = Math.floor((numericNextId - 1) / 26);
         }
 
         return nextId;

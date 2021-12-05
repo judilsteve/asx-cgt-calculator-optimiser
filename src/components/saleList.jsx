@@ -405,7 +405,7 @@ function EditSaleRow(props) {
                         </MenuItem>
                         {orderedAvailableParcels.map(p =>
                         <MenuItem key={p.id} onClick={() => toggleParcel(p.id)}>
-                            <Checkbox color="primary" checked={!!applicableParcelIds.includes(p.id)} />
+                            <Checkbox color="primary" checked={!!applicableParcelIds.includes(p.id)} indeterminate={applicableParcelIds.includes(p.id) && (unitsSoldLookup[p.id] < availableParcelsLookup[p.id].remainingUnits)}/>
                             <ListItemText primary={`${p.id}${p.memo ? ': ' + p.memo : ''}`} secondary={`${p.remainingUnits} available, $${perUnitCgtLiabilityLookup[p.id]?.toFixed(4) ?? '??'}/u CGT`}/>
                         </MenuItem>)}
                 </Select>
@@ -427,7 +427,7 @@ function EditSaleRow(props) {
                 <IconButton onClick={cancel}><Clear/></IconButton>
             </TableCell>
         </TableRow>
-        {applicableParcelIds.map(pid => 
+        {orderBy(applicableParcelIds, pid => perUnitCgtLiabilityLookup[pid]).map(pid => 
             <ApplicableParcel
                 key={pid}
                 parcel={availableParcelsLookup[pid]}

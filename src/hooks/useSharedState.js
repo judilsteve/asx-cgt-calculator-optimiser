@@ -8,10 +8,10 @@ export class SharedState {
 
     watch(watcher) {
         this.watchers.push(watcher);
-        return this.watchers.length - 1;
     }
 
-    removeWatcher(index) {
+    removeWatcher(watcher) {
+        const index = this.watchers.indexOf(watcher);
         this.watchers.splice(index, 1);
     }
 
@@ -77,8 +77,8 @@ export class SharedPersistedState extends SharedState {
 export function useSharedState(sharedState) {
     const [value, setValue] = useState(sharedState.value);
     useEffect(() => {
-        const watcherIndex = sharedState.watch(setValue);
-        return () => sharedState.removeWatcher(watcherIndex);
+        sharedState.watch(setValue);
+        return () => sharedState.removeWatcher(setValue);
     }, [sharedState]);
     return [value, newValue => sharedState.setValue(newValue)];
 }
